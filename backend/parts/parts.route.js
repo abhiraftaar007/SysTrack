@@ -1,0 +1,13 @@
+import express from "express";
+import { createPart, getAllParts, getUnusableParts, markPartUnusable, restorePart, updatePart } from "./parts.controller.js";
+
+const router = express.Router();
+
+router.post('/', createPart);
+router.get('/', getAllParts);
+router.get("/unusable", getUnusableParts);
+router.patch("/:id/unusable", markPartUnusable);
+router.patch("/:id/restore", restorePart);
+router.put('/:id', updatePart);
+
+export default router;
