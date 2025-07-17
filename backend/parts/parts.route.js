@@ -1,5 +1,5 @@
 import express from "express";
-import { createPart, getAllParts, getUnusableParts, markPartUnusable, restorePart, updatePart } from "./parts.controller.js";
+import { createPart, deletePartById, getAllParts, getUnusableParts, markPartUnusable, restorePart, updatePart } from "./parts.controller.js";
 
 const router = express.Router();
 
@@ -9,5 +9,6 @@ router.get("/unusable", getUnusableParts);
 router.patch("/:id/unusable", markPartUnusable);
 router.patch("/:id/restore", restorePart);
 router.put('/:id', updatePart);
+router.delete('/:id', deletePartById);
 
 export default router;

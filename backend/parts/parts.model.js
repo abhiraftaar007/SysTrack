@@ -1,10 +1,36 @@
 import mongoose, { Schema } from "mongoose";
 
+export const partTypesConfig = {
+    RAM: {
+        isMultiple: false
+    },
+    CPU: {
+        isMultiple: false
+    },
+    HDD: {
+        isMultiple: false
+    },
+    SSD:{
+        isMultiple: false
+    },
+    Monitor:{
+        isMultiple: false
+    },
+    Printer: {
+        isMultiple: true,
+    },
+    Headphone: {
+        isMultiple: true
+    }
+};
+
+const  validPartTypes = Object.keys(partTypesConfig);
+
 const partSchema = mongoose.Schema({
-    type: {
+    partType: {
         type: String,
-        enum: ['CPU', 'Monitor', 'Mouse'],
-        required: true
+        required: true,
+        enum: validPartTypes
     },
     barcode: {
         type: String,
@@ -22,25 +48,41 @@ const partSchema = mongoose.Schema({
     },
     model: {
         type: String,
-        required: true
+        required: true,
     },
     specs: {
-        type: Schema.Types.Mixed,
+        type: [
+            {
+                key: {
+                    type: String,
+                    required: true
+                },
+                value: {
+                    type: String,
+                    required: true
+                }
+            }
+        ],
+        default: []
+    },
+    notes: {
+        type: String
     },
     status: {
         type: String,
-        enum: ['active', 'unusable'],
-        default: 'active'
+        enum: ['Active', 'Unusable'],
+        default: 'Active'
     },
     unusableReason: {
         type: String,
         default: null,
     },
-    assignedSystem: {
-        type: Schema.Types.ObjectId,
-        ref: "System",
-        default: null
-    }
+    assignedSystem: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "System"
+        }
+    ]
 }, { timestamps: true });
 
 export default mongoose.model('Parts', partSchema);

@@ -1,98 +1,212 @@
-import Parts from "./parts.model.js";
+import Parts, { partTypesConfig } from "./parts.model.js";
 
 export const createPart = async (req, res) => {
     try {
         const {
-            type,
+            partType,
             barcode,
             serialNumber,
             brand,
             model,
             specs,
+            notes,
             status,
-            unusableReason
+            unusableReason,
+            assignedSystem = []
         } = req.body;
 
         const errors = {};
+        if (!partType) errors.partType = 'Part type is required';
+        if (!barcode) errors.barcode = 'Barcode is required';
+        if (!serialNumber) errors.serialNumber = 'Serial number is required';
+        if (!brand) errors.brand = 'Brand is required';
+        if (!model) errors.model = 'Model is required';
 
-        if (!type) errors.type = "Part type is required";
-        if (!barcode) errors.barcode = "Barcode is required";
-        if (!serialNumber) errors.serialNumber = "Serial number is required";
-        if (!brand) errors.brand = "Brand is required";
-        if (!model) errors.model = "Model is required";
-
-        const validTypes = ['CPU', 'Monitor', 'Mouse'];
-        const validStatuses = ['active', 'unusable'];
-
-        if (type && !validTypes.includes(type)) {
-            errors.type = `Type must be one of: ${validTypes.join(', ')}`;
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({errors });
         }
 
-        if (status && !validStatuses.includes(status)) {
-            errors.status = `Status must be one of: ${validStatuses.join(', ')}`;
-        }
+        const hasSpecialCharacters = (value) => /[^a-zA-Z0-9 ]/.test(value);
 
-        if (unusableReason && status !== 'unusable') {
-            errors.unusableReason = "Unusable reason can only be set if status is 'unusable'";
+        ['brand', 'model', 'serialNumber', 'barcode', 'notes', 'unusableReason'].forEach((field) => {
+            if (req.body[field] && hasSpecialCharacters(req.body[field])) {
+                errors[field] = `${field} contains special characters`;
+            }
+        });
+        if (Array.isArray(specs)) {
+            specs.forEach((spec, index) => {
+                if (hasSpecialCharacters(spec.key)) {
+                    errors[`specs[${index}].key`] = `Spec key at index ${index} contains special characters`;
+                }
+                if (hasSpecialCharacters(spec.value)) {
+                    errors[`specs[${index}].value`] = `Spec value at index ${index} contains special characters`;
+                }
+            });
         }
 
         if (Object.keys(errors).length > 0) {
             return res.status(400).json({ errors });
         }
 
-        const part = await Parts.create({
-            type,
+        const config = partTypesConfig[partType];
+        if (!config) {
+            errors.partType = `Invalid part type: ${partType}`;
+        }
+
+        if (!config.isMultiple && assignedSystem.length > 1) {
+            errors.assignedSystem = `Part type (${partType}) can only be assigned to one system`;
+        }
+
+        if (status === 'Unusable' && !unusableReason) {
+            errors.unusableReason = 'Unusable reason is required when status is (Unusable)';
+        }
+
+        const existingBarcode = await Parts.findOne({ barcode });
+        if (existingBarcode) {
+            errors.barcode = 'Barcode must be unique';
+        }
+
+        const existingSerial = await Parts.findOne({ serialNumber });
+        if (existingSerial) {
+            errors.serialNumber = 'Serial number must be unique';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ errors });
+        }
+
+        const newPart = new Parts({
+            partType,
             barcode,
             serialNumber,
             brand,
             model,
             specs,
+            notes,
             status,
-            unusableReason
+            unusableReason: status === 'Unusable' ? unusableReason : null,
+            assignedSystem
         });
 
-        return res.status(201).json({
-            message: "Part added successfully",
-            part
-        });
+        await newPart.save();
 
-    } catch (error) {
-        if (error.code === 11000) {
-            const duplicateField = Object.keys(error.keyPattern)[0];
-            return res.status(400).json({
-                errors: {
-                    [duplicateField]: `${duplicateField} must be unique. This value already exists.`
-                }
-            });
-        }
-        return res.status(500).json({
-            message: "Internal server error",
-            error: error.message
+        res.status(201).json({
+            message: "Part created Successfully",
+            part: newPart
         });
+    } catch (err) {
+        console.error("Error in creating parts", err.message);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
-
 
 export const updatePart = async (req, res) => {
     try {
         const partId = req.params.id;
-        const updateData = req.body;
+        const {
+            partType,
+            barcode,
+            serialNumber,
+            brand,
+            model,
+            specs,
+            notes,
+            status,
+            unusableReason,
+            assignedSystem = []
+        } = req.body;
 
+        const errors = {};
+
+        // Required field checks
+        if (!partType) errors.partType = 'Part type is required';
+        if (!barcode) errors.barcode = 'Barcode is required';
+        if (!serialNumber) errors.serialNumber = 'Serial number is required';
+        if (!brand) errors.brand = 'Brand is required';
+        if (!model) errors.model = 'Model is required';
+
+        // Early return if required fields are missing
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ errors });
+        }
+
+        // Special character validation
+        const hasSpecialCharacters = (value) => /[^a-zA-Z0-9 ]/.test(value);
+
+        ['brand', 'model', 'serialNumber', 'barcode', 'notes', 'unusableReason'].forEach((field) => {
+            if (req.body[field] && hasSpecialCharacters(req.body[field])) {
+                errors[field] = `${field} contains special characters`;
+            }
+        });
+
+        if (Array.isArray(specs)) {
+            specs.forEach((spec, index) => {
+                if (hasSpecialCharacters(spec.key)) {
+                    errors[`specs[${index}].key`] = `Spec key at index ${index} contains special characters`;
+                }
+                if (hasSpecialCharacters(spec.value)) {
+                    errors[`specs[${index}].value`] = `Spec value at index ${index} contains special characters`;
+                }
+            });
+        }
+
+        // Part type config validation
+        const config = partTypesConfig[partType];
+        if (!config) {
+            errors.partType = `Invalid part type: ${partType}`;
+        }
+
+        if (!config?.isMultiple && assignedSystem.length > 1) {
+            errors.assignedSystem = `Part type (${partType}) can only be assigned to one system`;
+        }
+
+        if (status === 'Unusable' && !unusableReason) {
+            errors.unusableReason = 'Unusable reason is required when status is (Unusable)';
+        }
+
+        // Check if barcode or serial number is changing and already used
+        const existingBarcode = await Parts.findOne({ barcode, _id: { $ne: partId } });
+        if (existingBarcode) {
+            errors.barcode = 'Barcode must be unique';
+        }
+
+        const existingSerial = await Parts.findOne({ serialNumber, _id: { $ne: partId } });
+        if (existingSerial) {
+            errors.serialNumber = 'Serial number must be unique';
+        }
+
+        // Final error return
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ errors });
+        }
         const updatedPart = await Parts.findByIdAndUpdate(
             partId,
-            updateData,
+            {
+                partType,
+                barcode,
+                serialNumber,
+                brand,
+                model,
+                specs,
+                notes,
+                status,
+                unusableReason,
+                assignedSystem
+            },
             { new: true, runValidators: true }
-        )
+        );
 
         if (!updatedPart) {
             return res.status(404).json({ error: 'Part not found' });
         }
 
         res.status(200).json({ message: "Updated successfully", updatedPart });
+
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
-}
+};
+
 
 export const getAllParts = async (req, res) => {
     try {
@@ -135,31 +249,48 @@ export const markPartUnusable = async (req, res) => {
 
 export const getUnusableParts = async (req, res) => {
     try {
-        const parts = await Parts.find({status: "unusable"});
-        if(!parts) return res.status(404).json({message: "No unusable Parts found"});
+        const parts = await Parts.find({ status: "unusable" });
+        if (!parts) return res.status(404).json({ message: "No unusable Parts found" });
 
-        return res.status(200).json({message: "Unusable Parts fetched success", parts});
+        return res.status(200).json({ message: "Unusable Parts fetched success", parts });
     } catch (error) {
-        return res.status(500).json({message: "Failed to unusable fetch parts", error: err});
+        return res.status(500).json({ message: "Failed to unusable fetch parts", error: err });
     }
 }
 
 export const restorePart = async (req, res) => {
     try {
-        const {id} = req.params;
+        const { id } = req.params;
 
         const part = await Parts.findByIdAndUpdate(
             id,
             {
                 status: "active", unusableReason: null
             },
-            {new : true}
+            { new: true }
         )
 
-        if(!part) return res.status(404).json({message: "Part not found"});
+        if (!part) return res.status(404).json({ message: "Part not found" });
 
-        return res.status(200).json({message: "Part restored to active", part});
+        return res.status(200).json({ message: "Part restored to active", part });
     } catch (error) {
-        return res.status(500).json({message: "Failed to restore part", error: err});
+        return res.status(500).json({ message: "Failed to restore part", error: err });
     }
 }
+
+export const deletePartById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedPart = await Parts.findByIdAndDelete(id);
+
+        if (!deletedPart) {
+            return res.status(404).json({ error: "Part not found" });
+        }
+
+        return res.status(200).json({ message: "Part deleted successfully" });
+    } catch (error) {
+        console.error("Delete Part Error:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+};
