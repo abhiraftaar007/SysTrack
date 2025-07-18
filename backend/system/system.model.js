@@ -2,6 +2,10 @@ import mongoose, {Schema} from "mongoose";
 
 const systemSchema = mongoose.Schema(
     {
+    name:{
+        type: String,
+        unique: true
+    },
     parts: [{
         type: Schema.Types.ObjectId,
         ref: 'Parts'

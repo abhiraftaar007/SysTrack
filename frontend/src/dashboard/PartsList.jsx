@@ -145,7 +145,7 @@ const PartsList = () => {
                                 <td className="py-2 px-4">{part.model}</td>
                                 <td className="py-2 px-4">{part.brand}</td>
                                 <td className="py-2 px-4">
-                                    <span className="text-green-600">{part.status}</span>
+                                    <span className={part.status === "Active" ? "text-green-600" : "text-red-500"}>{part.status}</span>
                                 </td>
                                 <td className="py-2 px-4 text-center space-x-2">
                                     <button onClick={() => handleOpen("view", part)}>
@@ -168,11 +168,13 @@ const PartsList = () => {
             {openModal === "view" && selectedPart && (
                 <Modal title="View Part Details" onClose={handleClose}>
                     <div className="max-h-[70vh] overflow-y-auto space-y-2 text-gray-700 pr-2">
-                        <p><strong>Type:</strong> {selectedPart.partType}</p>
-                        <p><strong>Model:</strong> {selectedPart.model}</p>
-                        <p><strong>Brand:</strong> {selectedPart.brand}</p>
-                        <p><strong>Status:</strong> <span className="text-green-600">{selectedPart.status}</span></p>
-                        <p><strong>Barcode:</strong> {selectedPart.barcode}</p>
+                        <p><strong>Type:</strong> {selectedPart.partType ?? "N/A"}</p>
+                        <p><strong>Model:</strong> {selectedPart.model ?? "N/A"}</p>
+                        <p><strong>Brand:</strong> {selectedPart.brand ?? "N/A"}</p>
+                        <p><strong>Multiple Systems:</strong> {selectedPart.isMultiple ? "Yes" : "No"}</p>
+                        <p><strong>Status:</strong> <span className={selectedPart.status === "Active" ? "text-green-600" : "text-red-600"}>{selectedPart.status ?? "N/A"}</span></p>
+                        <p><strong>Unusable Reason:</strong> {selectedPart.unusableReason ?? "N/A"}</p>
+                        <p><strong>Barcode:</strong> {selectedPart.barcode ?? "N/A"}</p>
                         <p><strong>Serial Number:</strong> {selectedPart.serialNumber}</p>
                         <p><strong>Notes:</strong> {selectedPart.notes || 'N/A'}</p>
                         <p><strong>Specs:</strong></p>
@@ -203,6 +205,8 @@ const PartsList = () => {
                             />
                             {errors.partType && <p className="text-red-500 text-sm">{errors.partType}</p>}
                         </div>
+
+                        
 
                         {/* Barcode */}
                         <div>
@@ -301,8 +305,29 @@ const PartsList = () => {
                                             }
                                         }}
                                     />
+                                    <button
+                                        type="button"
+                                        className="text-red-600 text-xl px-2"
+                                        onClick={() => {
+                                            const updatedSpecs = selectedPart.specs.filter((_, i) => i !== index);
+                                            setSelectedPart({ ...selectedPart, specs: updatedSpecs });
+                                        }}
+                                    >
+                                        &times;
+                                    </button>
                                 </div>
                             ))}
+
+                            <button
+                                type='button'
+                                className='mt-2 px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700'
+                                onClick={() => {
+                                    const updatedSpecs = [...(selectedPart.specs || []), { key: '', value: '' }];
+                                    setSelectedPart({ ...selectedPart, specs: updatedSpecs })
+                                }}
+                            >
+                                + Add Spec
+                            </button>
                         </div>
 
                         {/* Notes */}
@@ -387,10 +412,10 @@ const PartsList = () => {
 const Modal = ({ title, children, onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/50 bg-opacity-40 flex items-center justify-center z-50 px-4">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto custom-scroll">
+                <div className="flex justify-between items-center mb-4 ">
                     <h3 className="text-lg font-semibold">{title}</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black">&times;</button>
+                    <button onClick={onClose} className="text-gray-500 text-3xl hover:text-black">&times;</button>
                 </div>
                 <div>{children}</div>
             </div>

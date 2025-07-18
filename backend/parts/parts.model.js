@@ -32,6 +32,11 @@ const partSchema = mongoose.Schema({
         required: true,
         enum: validPartTypes
     },
+    isMultiple: {
+        type: Boolean,
+        required: true,
+        default:false
+    },
     barcode: {
         type: String,
         required: true,

@@ -5,6 +5,7 @@ export const createPart = async (req, res) => {
         const {
             partType,
             barcode,
+            isMultiple,
             serialNumber,
             brand,
             model,
@@ -23,7 +24,7 @@ export const createPart = async (req, res) => {
         if (!model) errors.model = 'Model is required';
 
         if (Object.keys(errors).length > 0) {
-            return res.status(400).json({errors });
+            return res.status(400).json({ errors });
         }
 
         const hasSpecialCharacters = (value) => /[^a-zA-Z0-9 ]/.test(value);
@@ -85,7 +86,8 @@ export const createPart = async (req, res) => {
             notes,
             status,
             unusableReason: status === 'Unusable' ? unusableReason : null,
-            assignedSystem
+            assignedSystem,
+            isMultiple
         });
 
         await newPart.save();
@@ -102,7 +104,7 @@ export const createPart = async (req, res) => {
 
 export const updatePart = async (req, res) => {
     try {
-        const partId = req.params.id;
+        const partId = req.body._id;
         const {
             partType,
             barcode,
@@ -113,24 +115,22 @@ export const updatePart = async (req, res) => {
             notes,
             status,
             unusableReason,
+            isMultiple,
             assignedSystem = []
         } = req.body;
 
         const errors = {};
 
-        // Required field checks
         if (!partType) errors.partType = 'Part type is required';
         if (!barcode) errors.barcode = 'Barcode is required';
         if (!serialNumber) errors.serialNumber = 'Serial number is required';
         if (!brand) errors.brand = 'Brand is required';
         if (!model) errors.model = 'Model is required';
 
-        // Early return if required fields are missing
         if (Object.keys(errors).length > 0) {
             return res.status(400).json({ errors });
         }
 
-        // Special character validation
         const hasSpecialCharacters = (value) => /[^a-zA-Z0-9 ]/.test(value);
 
         ['brand', 'model', 'serialNumber', 'barcode', 'notes', 'unusableReason'].forEach((field) => {
@@ -150,7 +150,6 @@ export const updatePart = async (req, res) => {
             });
         }
 
-        // Part type config validation
         const config = partTypesConfig[partType];
         if (!config) {
             errors.partType = `Invalid part type: ${partType}`;
@@ -164,7 +163,6 @@ export const updatePart = async (req, res) => {
             errors.unusableReason = 'Unusable reason is required when status is (Unusable)';
         }
 
-        // Check if barcode or serial number is changing and already used
         const existingBarcode = await Parts.findOne({ barcode, _id: { $ne: partId } });
         if (existingBarcode) {
             errors.barcode = 'Barcode must be unique';
@@ -175,16 +173,17 @@ export const updatePart = async (req, res) => {
             errors.serialNumber = 'Serial number must be unique';
         }
 
-        // Final error return
         if (Object.keys(errors).length > 0) {
             return res.status(400).json({ errors });
         }
+
         const updatedPart = await Parts.findByIdAndUpdate(
             partId,
             {
                 partType,
                 barcode,
                 serialNumber,
+                isMultiple,
                 brand,
                 model,
                 specs,
@@ -196,6 +195,12 @@ export const updatePart = async (req, res) => {
             { new: true, runValidators: true }
         );
 
+        if (status === "Active") {
+            await Parts.updateOne(
+                { _id: partId },
+                { $unset: { unusableReason: "" } }
+            );
+        }
         if (!updatedPart) {
             return res.status(404).json({ error: 'Part not found' });
         }
@@ -210,13 +215,39 @@ export const updatePart = async (req, res) => {
 
 export const getAllParts = async (req, res) => {
     try {
-        const { status, type } = req.query;
+        const { status, type} = req.query;
         const query = {};
 
         if (status) query.status = status;
         if (type) query.type = type;
-
         const parts = await Parts.find(query);
+
+        if (parts.length == 0) return res.status(200).json({ success: true, message: "No Parts Found" });
+
+        res.status(200).json({ success: true, message: "Parts fetched successfully", parts })
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+export const getFreeParts = async (req, res) => {
+    try {
+        const parts = await Parts.find({
+            $or:[
+                {
+                    isMultiple:true
+                },
+                {
+                    $and:[
+                        {
+                            isMultiple:false
+                        },
+                        {
+                            assignedSystem:[]
+                        }
+                    ]
+                }
+            ]
+        });
 
         if (parts.length == 0) return res.status(200).json({ success: true, message: "No Parts Found" });
 

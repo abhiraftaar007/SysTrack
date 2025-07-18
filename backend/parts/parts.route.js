@@ -1,10 +1,11 @@
 import express from "express";
-import { createPart, deletePartById, getAllParts, getUnusableParts, markPartUnusable, restorePart, updatePart } from "./parts.controller.js";
+import { createPart, deletePartById, getAllParts, getFreeParts, getUnusableParts, markPartUnusable, restorePart, updatePart } from "./parts.controller.js";
 
 const router = express.Router();
 
 router.post('/', createPart);
 router.get('/', getAllParts);
+router.get('/freeparts', getFreeParts);
 router.get("/unusable", getUnusableParts);
 router.patch("/:id/unusable", markPartUnusable);
 router.patch("/:id/restore", restorePart);

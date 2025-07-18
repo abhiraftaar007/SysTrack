@@ -57,7 +57,7 @@ const CreateParts = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white max-h-[90vh] overflow-y-auto rounded-xl shadow-lg p-6 w-full max-w-lg relative">
+            <div className="bg-white max-h-[90vh] overflow-y-auto rounded-xl shadow-lg p-6 w-full max-w-lg relative custom-scroll">
                 <button
                     onClick={onClose}
                     className="absolute rounded-lg top-2 right-2 text-gray-500 hover:text-gray-800"
@@ -72,7 +72,7 @@ const CreateParts = ({ onClose }) => {
                     <div>
                         <label className="block mb-1 font-medium text-gray-700">Part Type</label>
                         <select
-                            name="partType"
+                            name="partType"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
                             onChange={handleChange}
                             value={formData.partType}
                             className={`w-full p-2 border rounded-lg ${errors.partType ? 'border-red-500' : ''}`}

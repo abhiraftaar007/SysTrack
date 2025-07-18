@@ -21,7 +21,7 @@ export const getDashboardStats = async (req, res) => {
 
 export const createSystem = async (req, res) => {
     try {
-        const { parts, assignedTo, status } = req.body;
+        const {name, parts, assignedTo, status } = req.body;
         const errors = {};
 
         if (!Array.isArray(parts) || parts.length === 0) {
@@ -31,34 +31,14 @@ export const createSystem = async (req, res) => {
             if (existingParts.length !== parts.length) {
                 errors.parts = "One or more parts do not exist.";
             }
-            const assignedParts = existingParts.filter(part => part.assignedSystem);
-            if (assignedParts.length > 0) {
-                errors.parts = `Some parts are already assigned to another system: ${assignedParts.map(p => p.barcode).join(', ')}`;
-            }
-        }
-
-        if (assignedTo) {
-            const existingEmployee = await Employee.findById(assignedTo);
-            if (!existingEmployee) {
-                errors.assignedTo = "Employee does not exist.";
-            }
-            const employeeAlreadyHasSystem = await System.findOne({ assignedTo });
-            if (employeeAlreadyHasSystem) {
-                errors.assignedTo = "Employee already has a system assigned.";
-            }
-            if (status !== 'assigned') {
-                errors.status = "Status must be 'assigned' if assigning to an employee.";
-            }
-        }
-        if (!assignedTo && status === 'assigned') {
-            errors.status = "Cannot mark as 'assigned' without assigning to an employee.";
+            
         }
 
         if (Object.keys(errors).length > 0) {
             return res.status(400).json({ errors });
         }
 
-        const system = await System.create({ parts, assignedTo, status });
+        const system = await System.create({ name, parts, assignedTo, status });
 
         await Part.updateMany(
             { _id: { $in: parts } },
