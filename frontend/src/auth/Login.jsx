@@ -1,4 +1,4 @@
-import {useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +23,7 @@ const Login = () => {
           headers: { "Content-Type": "application/json" },
         }
       );
-     
+
       if (res.status === 200) {
         toast.success(res.data.message);
 
@@ -80,13 +80,15 @@ const Login = () => {
           placeholder="Email"
           onChange={handleChange}
           required
+          autoComplete="current-email"
           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
-        
+
         <input
           name="password"
           type="password"
+          autoComplete="current-password"
           value={data.password}
           placeholder="Password"
           onChange={handleChange}
@@ -94,7 +96,7 @@ const Login = () => {
           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
-        
+
         <button
           type="submit"
           className="w-full bg-indigo-600 text-white rounded-lg py-3 font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer"

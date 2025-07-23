@@ -31,13 +31,7 @@ const employeeSchema = mongoose.Schema({
     phone: {
         type: Number,
         required: [true, "Phone number is required"],
-        unique: true,
-        validate: {
-            validator: function (v) {
-                return /^\d{10}$/.test(v);
-            },
-            message: props => `${props.value} is not a valid 10-digit phone number`
-        }
+        unique: true
     },
     allocatedSys:{
         type: Schema.Types.ObjectId, 

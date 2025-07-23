@@ -107,7 +107,7 @@ const PartsList = () => {
         <div className="w-full px-4 py-4">
             <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">
-                    Total Parts ({parts.length > 0 ? parts.length : '0'})
+                    Total Parts ({parts?.length > 0 ? parts.length : '0'})
                 </h2>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center">
                     <button
@@ -127,8 +127,8 @@ const PartsList = () => {
 
             {showModal && <CreateParts onClose={() => setShowModal(false)} />}
 
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border rounded-lg shadow text-sm">
+            <div className="overflow-x-auto border rounded-lg shadow">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-100 text-gray-600 text-left">
                         <tr>
                             <th className="py-2 px-4">Part Name</th>
@@ -139,7 +139,7 @@ const PartsList = () => {
                         </tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        {parts.map((part) => (
+                        {(parts.length == 0 && !loading) ? <tr><td colSpan={5} className="text-center py-4 text-gray-500 text-2xl">No parts found</td></tr> : parts?.map((part) => (
                             <tr key={part._id} className="border-b hover:bg-gray-50">
                                 <td className="py-2 px-4">{part.partType}</td>
                                 <td className="py-2 px-4">{part.model}</td>
@@ -179,7 +179,7 @@ const PartsList = () => {
                         <p><strong>Notes:</strong> {selectedPart.notes || 'N/A'}</p>
                         <p><strong>Specs:</strong></p>
                         <ul className="list-disc ml-5">
-                            {selectedPart.specs.map((spec) => (
+                            {selectedPart?.specs?.map((spec) => (
                                 <li key={spec._id}>{spec.key}: {spec.value}</li>
                             ))}
                         </ul>
@@ -206,7 +206,7 @@ const PartsList = () => {
                             {errors.partType && <p className="text-red-500 text-sm">{errors.partType}</p>}
                         </div>
 
-                        
+
 
                         {/* Barcode */}
                         <div>
@@ -275,7 +275,7 @@ const PartsList = () => {
                         {/* Specs */}
                         <div className="space-y-2">
                             <label className="block font-semibold">Specifications</label>
-                            {selectedPart.specs?.map((spec, index) => (
+                            {selectedPart?.specs?.map((spec, index) => (
                                 <div key={index} className="flex gap-2">
                                     <input
                                         type="text"

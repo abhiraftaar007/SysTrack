@@ -1,4 +1,5 @@
 import Parts, { partTypesConfig } from "./parts.model.js";
+import System from "../system/system.model.js"
 
 export const createPart = async (req, res) => {
     try {
@@ -215,34 +216,35 @@ export const updatePart = async (req, res) => {
 
 export const getAllParts = async (req, res) => {
     try {
-        const { status, type} = req.query;
+        const { status, type } = req.query;
         const query = {};
 
         if (status) query.status = status;
         if (type) query.type = type;
         const parts = await Parts.find(query);
 
-        if (parts.length == 0) return res.status(200).json({ success: true, message: "No Parts Found" });
+        if (parts.length == 0) return res.status(200).json({ success: true, message: "No Parts Found", parts });
 
         res.status(200).json({ success: true, message: "Parts fetched successfully", parts })
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 }
+
 export const getFreeParts = async (req, res) => {
     try {
         const parts = await Parts.find({
-            $or:[
+            $or: [
                 {
-                    isMultiple:true
+                    isMultiple: true
                 },
                 {
-                    $and:[
+                    $and: [
                         {
-                            isMultiple:false
+                            isMultiple: false
                         },
                         {
-                            assignedSystem:[]
+                            assignedSystem: []
                         }
                     ]
                 }
@@ -313,11 +315,15 @@ export const deletePartById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const deletedPart = await Parts.findByIdAndDelete(id);
+        const part = await Parts.findById(id);
+        if (!part) return res.status(404).json({ error: "Part not found" });
 
-        if (!deletedPart) {
-            return res.status(404).json({ error: "Part not found" });
-        }
+        await System.updateMany(
+            { parts: id },
+            { $pull: { parts: id } }
+        )
+
+        await Parts.findByIdAndDelete(id);
 
         return res.status(200).json({ message: "Part deleted successfully" });
     } catch (error) {

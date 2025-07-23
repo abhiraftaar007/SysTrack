@@ -2,19 +2,48 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
+import { useSystems } from '../context/SystemContext';
 
 const CreateSystem = ({ onClose }) => {
     const [parts, setParts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [errors, setErrors] = useState({});
+    const { setSystems } = useSystems();
+
+    const [allParts, setAllParts] = useState([]);
 
     const [name, setName] = useState('');
     const [selectedPartIds, setSelectedPartIds] = useState([]);
 
+    const [unassignedEmployees, setUnassignedEmployees] = useState([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+
+    const fetchUnassignedEmployees = async () => {
+        try {
+            const res = await axios.get("http://localhost:5000/api/employee/unassigned");
+            setUnassignedEmployees(res.data.employees);
+        } catch (error) {
+            console.error("Failed to fetch Unassigned employees:", error);
+        }
+    }
+
+    const fetchSystems = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/system/allsys');
+            setSystems(res.data.systems);
+        } catch (err) {
+            console.log(err);
+            setError('Failed to fetch parts');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchFreeParts = async () => {
         try {
             const res = await axios.get('http://localhost:5000/api/part/freeparts');
+            setAllParts(res.data.parts);
             setParts(res.data.parts);
         } catch (err) {
             setError('Failed to fetch parts');
@@ -26,11 +55,13 @@ const CreateSystem = ({ onClose }) => {
 
     useEffect(() => {
         fetchFreeParts();
+        fetchUnassignedEmployees();
     }, []);
 
-    useEffect(() => {
-        console.log(name, selectedPartIds);
-    }, [name, selectedPartIds])
+    const handleEmployeeSelect = (e) => {
+        setSelectedEmployeeId(e.target.value);
+        setErrors((prev) => ({ ...prev, employee: '' }))
+    }
 
     const handleNameChange = (e) => {
         setName(e.target.value);
@@ -42,6 +73,16 @@ const CreateSystem = ({ onClose }) => {
             if (prevIds.includes(value)) return prevIds;
             return [...prevIds, value];
         })
+        const remainingParts = parts.filter((part) => value.toString() != part._id?.toString())
+        setParts(remainingParts);
+    }
+
+    const handleRemovePart = (id) => {
+        setSelectedPartIds(prev => prev.filter(partId => partId !== id));
+        const removedPart = allParts.find(part => part._id === id);
+        if (removedPart) {
+            setParts(prev => [...prev, removedPart]);
+        }
     }
 
     const handleSubmit = async (e) => {
@@ -54,8 +95,10 @@ const CreateSystem = ({ onClose }) => {
         try {
             const res = await axios.post('http://localhost:5000/api/system/', {
                 name,
-                parts: selectedPartIds
+                parts: selectedPartIds,
+                EmployeeID: selectedEmployeeId
             });
+            fetchSystems();
             toast.success(res.data.message);
             onClose();
         } catch (err) {
@@ -105,31 +148,67 @@ const CreateSystem = ({ onClose }) => {
                     {/* Part Select by Barcode */}
                     <div>
                         <label className="block mb-1 font-medium text-gray-700">
-                            Select Part (by Barcode)
+                            Select Part (by Part Type - Barcode)
                         </label>
                         <select
                             name="selectedPartId"
-                            className={`w-full p-2 border rounded-lg ${errors.selectedPartId ? 'border-red-500' : ''}`}
+                            className={`w-full p-2 border rounded-lg ${errors.parts ? 'border-red-500' : ''}`}
                             onChange={handlePartSelect}
                             value=""
                         >
                             <option value="">-- Select Part --</option>
-                            {parts.map(part => (
+                            {parts?.map(part => (
                                 <option key={part._id} value={part._id}>
-                                    {part.barcode}
+                                    {part.partType} - {part.barcode}
                                 </option>
                             ))}
                         </select>
 
                         <ul className='mt-2 text-sm text-gray-600 list-disc list-inside'>
-                            {selectedPartIds.map(id => {
-                                const part = parts.find(p => p._id === id);
-                                return <li key={id}>{part?.barcode ?? 'Unknown'}</li>
+                            {selectedPartIds?.map(id => {
+                                const part = allParts.find(p => p._id === id);
+                                return (
+                                    <li key={id} className='flex justify-between items-center py-1'>
+                                        <span>{part?.partType} - {part?.barcode ?? 'Unknown'}</span>
+                                        <button
+                                            type='button'
+                                            onClick={() => handleRemovePart(id)}
+                                            className='ml-2 text-red-500 hover:text-red-700'
+                                            title='Remove'
+                                        >
+                                            ✖
+                                        </button>
+                                    </li>
+                                )
                             })
                             }
                         </ul>
-                        {errors.selectedPartId && (
-                            <p className="text-red-500 text-sm">{errors.selectedPartId}</p>
+                        {errors.parts && (
+                            <p className="text-red-500 text-sm">{errors.parts}</p>
+                        )}
+                    </div>
+
+                    {/* Assign to Employee */}
+                    <div>
+                        <label className="block mb-1 font-medium text-gray-700">
+                            Assign to Employee (by Name - EMP_ID)
+                        </label>
+                        <select
+                            name="employee"
+                            className={`w-full p-2 border rounded-lg ${errors.employee ? 'border-red-500' : ''}`}
+                            onChange={handleEmployeeSelect}
+                            value={selectedEmployeeId}
+                        >
+                            <option value="">-- Select Employee --</option>
+                            {unassignedEmployees?.map(emp => (
+                                <option key={emp._id} value={emp._id}>
+                                    {emp.name} - {emp.employeeID}
+                                </option>
+                            ))}
+                        </select>
+
+                        {errors.employee && (
+                            <p className="text-red-500 text-sm">{errors.employee}</p>
                         )}
                     </div>
 

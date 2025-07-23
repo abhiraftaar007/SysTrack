@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useParts } from "../context/PartsContext";
 
 const CreateParts = ({ onClose }) => {
+    const { parts, setParts } = useParts();
     const [formData, setFormData] = useState({
         partType: '',
         brand: '',
@@ -34,6 +36,24 @@ const CreateParts = ({ onClose }) => {
         }
     };
 
+    const fetchParts = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/part');
+            setParts(res.data.parts);
+        } catch (err) {
+            console.log(err);
+            setErrors('Failed to fetch parts');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRemoveSpec = (index) => {
+        const updatedSpecs = [...formData.specs];
+        updatedSpecs.splice(index, 1);
+        setFormData((prev) => ({ ...prev, specs: updatedSpecs }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -43,6 +63,7 @@ const CreateParts = ({ onClose }) => {
                 assignedSystem: []
             };
             const res = await axios.post("http://localhost:5000/api/part", payload);
+            fetchParts();
             toast.success(res.data.message);
             onClose();
         } catch (err) {
@@ -72,7 +93,7 @@ const CreateParts = ({ onClose }) => {
                     <div>
                         <label className="block mb-1 font-medium text-gray-700">Part Type</label>
                         <select
-                            name="partType"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                            name="partType"
                             onChange={handleChange}
                             value={formData.partType}
                             className={`w-full p-2 border rounded-lg ${errors.partType ? 'border-red-500' : ''}`}
@@ -214,9 +235,18 @@ const CreateParts = ({ onClose }) => {
                             </button>
                         </div>
                         {formData.specs.length > 0 && (
-                            <ul className="text-sm text-gray-700 list-disc ml-5">
+                            <ul className="text-sm text-gray-700 space-y-1">
                                 {formData.specs.map((spec, idx) => (
-                                    <li key={idx}>{spec.key}: {spec.value}</li>
+                                    <li key={idx} className="flex items-center justify-between bg-gray-100 px-3 py-1 rounded">
+                                        <span>{spec.key}: {spec.value}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveSpec(idx)}
+                                            className="text-red-500 hover:text-red-700 font-bold ml-3"
+                                        >
+                                            &times;
+                                        </button>
+                                    </li>
                                 ))}
                             </ul>
                         )}
